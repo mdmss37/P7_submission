@@ -21,6 +21,7 @@ class Game(ndb.Model):
     attempts_remaining = ndb.IntegerProperty(required=True, default=5)
     game_over = ndb.BooleanProperty(required=True, default=False)
     user = ndb.KeyProperty(required=True, kind='User')
+    cancelled = ndb.BooleanProperty(required=True, default=False)
 
     @classmethod
     def new_game(cls, user, min, max, attempts):
@@ -31,7 +32,8 @@ class Game(ndb.Model):
                     target=random.choice(range(1, max + 1)),
                     attempts_allowed=attempts,
                     attempts_remaining=attempts,
-                    game_over=False)
+                    game_over=False,
+                    cancelled=False)
         game.put()
         return game
 
@@ -43,6 +45,7 @@ class Game(ndb.Model):
         form.attempts_remaining = self.attempts_remaining
         form.game_over = self.game_over
         form.message = message
+        form.cancelled = self.cancelled
         return form
 
     def end_game(self, won=False):
@@ -75,6 +78,7 @@ class GameForm(messages.Message):
     game_over = messages.BooleanField(3, required=True)
     message = messages.StringField(4, required=True)
     user_name = messages.StringField(5, required=True)
+    cancelled = messages.BooleanField(6, required=True)
 
 # Added for get_user_games
 class GameForms(messages.Message):

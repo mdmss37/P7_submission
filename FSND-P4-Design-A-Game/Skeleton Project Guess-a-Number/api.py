@@ -162,7 +162,24 @@ class GuessANumberApi(remote.Service):
     def get_user_games(self, request):
         """This returns all of a User's active games"""
         user = User.query(User.name == request.user_name).get()
-        games = Game.query(Game.user == user.key, Game.game_over == False).fetch()
+        games = Game.query(Game.user == user.key, Game.game_over == False,
+                           Game.cancelled == False).fetch()
         return GameForms(items=[game.to_form("Active games of {}".format(user.name)) for game in games])
+
+    # Extend API,cancel_game: This endpoint allows users to cancel a game in progress
+    @endpoints.method(request_message=GET_GAME_REQUEST,
+                      response_message=StringMessage,
+                      path='game/cancel/{urlsafe_game_key}',
+                      name='cancel_game',
+                      http_method='PUT')
+    def cancel_game(self, request):
+        """Cancel game in progress."""
+        game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        if game:
+            game.cancelled = True
+            game.put()
+            return StringMessage(message="Current game has been cancelled!")
+        else:
+            raise endpoints.NotFoundException('Game not found!')
 
 api = endpoints.api_server([GuessANumberApi])
