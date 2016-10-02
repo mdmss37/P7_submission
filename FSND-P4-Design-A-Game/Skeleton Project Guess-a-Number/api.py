@@ -19,6 +19,10 @@ from utils import get_by_urlsafe
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
 GET_GAME_REQUEST = endpoints.ResourceContainer(
         urlsafe_game_key=messages.StringField(1),)
+
+GET_SCORE_REQUEST = endpoints.ResourceContainer(
+    number_of_results=messages.IntegerField(1),)
+
 MAKE_MOVE_REQUEST = endpoints.ResourceContainer(
     MakeMoveForm,
     urlsafe_game_key=messages.StringField(1),)
@@ -181,5 +185,19 @@ class GuessANumberApi(remote.Service):
             return StringMessage(message="Current game has been cancelled!")
         else:
             raise endpoints.NotFoundException('Game not found!')
+
+    # Extend API,get_high_scores: This endpoint is to return highscores of games,
+    # Can be limited by optional parameter number_of_results
+    @endpoints.method(request_message=GET_SCORE_REQUEST,
+                      response_message=ScoreForms,
+                      path='game/highscores',
+                      name='get_high_scores',
+                      http_method='GET')
+    def get_high_scores(self, request):
+        if request.number_of_results:
+            scores = Score.query().order(Score.guesses).fetch(limit = request.number_of_results)
+        else:
+            scores = Score.query().order(Score.guesses).fetch()
+        return ScoreForms(items=[score.to_form() for score in scores])
 
 api = endpoints.api_server([GuessANumberApi])
