@@ -62,8 +62,7 @@ class GuessANumberApi(remote.Service):
             raise endpoints.NotFoundException(
                     'A User with that name does not exist!')
         try:
-            game = Game.new_game(user.key, request.min,
-                                 request.max, request.attempts)
+            game = Game.new_game(user.key)
         except ValueError:
             raise endpoints.BadRequestException('Maximum must be greater '
                                                 'than minimum!')
@@ -94,24 +93,57 @@ class GuessANumberApi(remote.Service):
                       http_method='PUT')
     def make_move(self, request):
         """Makes a move. Returns a game state with message"""
+        strike = 0
+        ball = 0
+
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
         if game.game_over:
             return game.to_form('Game already over!')
 
+        target = game.target
+        copy_target = target[:]
+
         game.attempts_remaining -= 1
-        if request.guess == game.target:
+        # check strike and if strike, change target digit to "s" for check ball
+        if request.first_digit == copy_target[0]:
+            strike += 1
+            copy_target[0] = 9999
+        if request.second_digit == copy_target[1]:
+            strike += 1
+            copy_target[1] = 9999
+        if request.third_digit == copy_target[2]:
+            strike += 1
+            copy_target[2] = 9999
+        # check ball
+        if request.first_digit in copy_target:
+            ball += 1
+        if request.second_digit in copy_target:
+            ball += 1
+        if request.third_digit in copy_target:
+            ball += 1
+
+        if strike == 3:
+            game.game_history.append(
+                "Guess: {}{}{}, result: {} strike and {} ball".format(
+                request.first_digit, request.second_digit, request.third_digit,
+                strike, ball))
             game.end_game(True)
             return game.to_form('You win!')
-
-        if request.guess < game.target:
-            msg = 'Too low!'
         else:
-            msg = 'Too high!'
+            msg = "{} strike and {} ball!".format(str(strike), str(ball))
 
         if game.attempts_remaining < 1:
+            game.game_history.append(
+                "Guess: {}{}{}, result: {} strike and {} ball".format(
+                request.first_digit, request.second_digit, request.third_digit,
+                strike, ball))
             game.end_game(False)
             return game.to_form(msg + ' Game over!')
         else:
+            game.game_history.append(
+                "Guess: {}{}{}, result: {} strike and {} ball".format(
+                request.first_digit, request.second_digit, request.third_digit,
+                strike, ball))
             game.put()
             return game.to_form(msg)
 
@@ -199,5 +231,11 @@ class GuessANumberApi(remote.Service):
         else:
             scores = Score.query().order(Score.guesses).fetch()
         return ScoreForms(items=[score.to_form() for score in scores])
+
+    def get_user_rankings():
+        pass
+
+    def get_game_history():
+        pass
 
 api = endpoints.api_server([GuessANumberApi])
