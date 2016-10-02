@@ -123,6 +123,7 @@ class GuessANumberApi(remote.Service):
             ball += 1
 
         if strike == 3:
+            # TODO: can make add history function
             game.game_history.append(
                 "Guess: {}{}{}, result: {} strike and {} ball".format(
                 request.first_digit, request.second_digit, request.third_digit,
@@ -192,15 +193,27 @@ class GuessANumberApi(remote.Service):
     # Extend API, get_user_games: This returns all of a User's active games.
     @endpoints.method(request_message=USER_REQUEST,
                       response_message=GameForms,
-                      path='games/user/{user_name}',
-                      name='get_user_games',
+                      path='games/user/active/{user_name}',
+                      name='get_user_active_games',
                       http_method='GET')
-    def get_user_games(self, request):
+    def get_user_active_games(self, request):
         """This returns all of a User's active games"""
         user = User.query(User.name == request.user_name).get()
         games = Game.query(Game.user == user.key, Game.game_over == False,
                            Game.cancelled == False).fetch()
         return GameForms(items=[game.to_form("Active games of {}".format(user.name)) for game in games])
+
+    # Extend API, get_user_games: This returns all of a User's all games.
+    @endpoints.method(request_message=USER_REQUEST,
+                      response_message=GameForms,
+                      path='games/user/all/{user_name}',
+                      name='get_user_all_games',
+                      http_method='GET')
+    def get_user_all_games(self, request):
+        """This returns all of a User's active/finished games"""
+        user = User.query(User.name == request.user_name).get()
+        games = Game.query(Game.user == user.key).fetch()
+        return GameForms(items=[game.to_form("All games of {}".format(user.name)) for game in games])
 
     # Extend API,cancel_game: This endpoint allows users to cancel a game in progress
     @endpoints.method(request_message=GET_GAME_REQUEST,
@@ -226,6 +239,7 @@ class GuessANumberApi(remote.Service):
                       name='get_high_scores',
                       http_method='GET')
     def get_high_scores(self, request):
+        """return highscores limited with number_of_results"""
         if request.number_of_results:
             scores = Score.query().order(Score.guesses).fetch(limit = request.number_of_results)
         else:
@@ -235,7 +249,17 @@ class GuessANumberApi(remote.Service):
     def get_user_rankings():
         pass
 
-    def get_game_history():
-        pass
+    # Extend API, get_game_history:
+    # Your API Users may want to be able to see a 'history' of moves for each game.
+    @endpoints.method(request_message=GET_GAME_REQUEST,
+                      response_message=GameForm,
+                      path='game/history/{urlsafe_game_key}',
+                      name='get_game_history',
+                      http_method='GET')
+    def get_game_history(self, request):
+        """return game history of certain game"""
+        game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        # TODO: need to check the way to show only Game history
+        return game.to_form("Please check Game history!")
 
 api = endpoints.api_server([GuessANumberApi])
