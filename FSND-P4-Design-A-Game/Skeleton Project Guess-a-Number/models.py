@@ -17,19 +17,22 @@ class User(ndb.Model):
 class Game(ndb.Model):
     """Game object
     Game rule: player needs to guess 3digits number.
-    each digits chosen from 0~9 and each digit can not be repeated.
+    each digits are chosen from 0~9 and each digit can not be repeated.
     OK Target ex: 234, 942, 467, 103
     NG Target ex: 224, 949, 466, 100
 
-    Player gets feedback every time they guess number.
+    Players get feedback every time they guess number.
     number and digit matches --> "strike"
     number exists in target --> "ball"
 
     EX. Target = 234.
-    Guess 234 = 3-strike where player won.
-    Guess 235 = 2-strike where 2 and 3 matches with Target
-    Guess 423 = 3-ball where 2, 3 and 4 exists in target but digit not matches
-    Guess 782 = 1 ball where 2 exists in target but digit not matches
+    Guess 234 = 3-strike and 0-ball where player won.
+    Guess 235 = 2-strike and 0-ball where 2 and 3 matches with Target
+    Guess 243 = 1-strike and 2-ball where 2 matches with Target, 4 and 3 exists in Target
+    Guess 423 = 0-strike and 3-ball where 2, 3 and 4 exists in target but digit not matches
+    Guess 782 = 0-strike and 1 ball where 2 exists in target but digit not matches
+
+    Player ranking is evaluated by number of win.
 
     """
     target = ndb.IntegerProperty(repeated=True)
@@ -131,6 +134,14 @@ class ScoreForms(messages.Message):
     """Return multiple ScoreForms"""
     items = messages.MessageField(ScoreForm, 1, repeated=True)
 
+class UserRank(messages.Message):
+    """Return user ranking based on number of win"""
+    user_name = messages.StringField(1, required=True)
+    win_number = messages.IntegerField(2, required=True)
+
+class UserRanks(messages.Message):
+    """Return multiple UserRank"""
+    items = messages.MessageField(UserRank, 1, repeated=True)
 
 class StringMessage(messages.Message):
     """StringMessage-- outbound (single) string message"""

@@ -12,8 +12,10 @@ from google.appengine.api import memcache
 from google.appengine.api import taskqueue
 
 from models import User, Game, Score
+
+# GameForms, UserRank, UserRanks added
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, GameForms # GameForms added
+    ScoreForms, GameForms, UserRank, UserRanks
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -246,8 +248,26 @@ class GuessANumberApi(remote.Service):
             scores = Score.query().order(Score.guesses).fetch()
         return ScoreForms(items=[score.to_form() for score in scores])
 
-    def get_user_rankings():
-        pass
+    @endpoints.method(response_message=UserRanks,
+                      path='user/rankings',
+                      name='get_user_rankings',
+                      http_method='GET')
+    def get_user_rankings(self, request):
+        """Return UserRank class, sorted by win_number with descending order"""
+        items = []
+        users = User.query().fetch()
+
+        for user in users:
+            win_number = 0
+            scores = Score.query(Game.user == user.key).fetch()
+
+            for score in scores:
+                if score.won == True:
+                    win_number += 1
+
+            items.append(UserRank(user_name=user.name, win_number=win_number))
+        items.sort(key=lambda x: x.win_number, reverse=True)
+        return UserRanks(items=items)
 
     # Extend API, get_game_history:
     # Your API Users may want to be able to see a 'history' of moves for each game.
