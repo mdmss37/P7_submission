@@ -15,7 +15,7 @@ class User(ndb.Model):
 
 
 class Game(ndb.Model):
-    """Game object
+    """Game object, BaseBall
     Game rule: player needs to guess 3digits number.
     each digits are chosen from 0~9 and each digit can not be repeated.
     OK Target ex: 234, 942, 467, 103

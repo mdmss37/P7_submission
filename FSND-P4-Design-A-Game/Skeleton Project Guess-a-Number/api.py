@@ -34,7 +34,7 @@ USER_REQUEST = endpoints.ResourceContainer(user_name=messages.StringField(1),
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
 @endpoints.api(name='guess_a_number', version='v1')
-class GuessANumberApi(remote.Service):
+class BaseBallApi(remote.Service):
     """Game API"""
     @endpoints.method(request_message=USER_REQUEST,
                       response_message=StringMessage,
@@ -106,7 +106,7 @@ class GuessANumberApi(remote.Service):
         copy_target = target[:]
 
         game.attempts_remaining -= 1
-        # check strike and if strike, change target digit to "s" for check ball
+        # check strike and if strike, change target digit to 9999 for check ball
         if request.first_digit == copy_target[0]:
             strike += 1
             copy_target[0] = 9999
@@ -282,4 +282,4 @@ class GuessANumberApi(remote.Service):
         # TODO: need to check the way to show only Game history
         return game.to_form("Please check Game history!")
 
-api = endpoints.api_server([GuessANumberApi])
+api = endpoints.api_server([BaseBallApi])
