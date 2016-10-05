@@ -7,6 +7,7 @@ from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
 
+WORDS_LIST = ["student", "dog", "cat", "apple", "flower"]
 
 class User(ndb.Model):
     """User profile"""
@@ -15,27 +16,13 @@ class User(ndb.Model):
 
 
 class Game(ndb.Model):
-    """Game object, BaseBall
-    Game rule: player needs to guess 3digits number.
-    each digits are chosen from 0~9 and each digit can not be repeated.
-    OK Target ex: 234, 942, 467, 103
-    NG Target ex: 224, 949, 466, 100
-
-    Players get feedback every time they guess number.
-    number and digit matches --> "strike"
-    number exists in target --> "ball"
-
-    EX. Target = 234.
-    Guess 234 = 3-strike and 0-ball where player won.
-    Guess 235 = 2-strike and 0-ball where 2 and 3 matches with Target
-    Guess 243 = 1-strike and 2-ball where 2 matches with Target, 4 and 3 exists in Target
-    Guess 423 = 0-strike and 3-ball where 2, 3 and 4 exists in target but digit not matches
-    Guess 782 = 0-strike and 1 ball where 2 exists in target but digit not matches
+    """Game object, Hangman
 
     Player ranking is evaluated by number of win.
 
     """
-    target = ndb.IntegerProperty(repeated=True)
+    target = ndb.StringProperty(required=True)
+    state = ndb.StringProperty(required=True)
     user = ndb.KeyProperty(required=True, kind='User')
     game_over = ndb.BooleanProperty(required=True, default=False)
     cancelled = ndb.BooleanProperty(required=True, default=False)
@@ -46,9 +33,9 @@ class Game(ndb.Model):
     @classmethod
     def new_game(cls, user):
         """Creates and returns a new game"""
-        # if max < min:
-        #     raise ValueError('Maximum must be greater than minimum')
-        game = Game(target=random.sample([0,1,2,3,4,5,6,7,8,9],3),
+        target = random.choice(WORDS_LIST)
+        game = Game(target=target,
+                    state="_"*len(target),
                     user=user,
                     game_over=False,
                     cancelled=False)
@@ -59,13 +46,15 @@ class Game(ndb.Model):
         """Returns a GameForm representation of the Game"""
         form = GameForm()
         form.urlsafe_key = self.key.urlsafe()
-        form.user_name = self.user.get().name
-        form.attempts_remaining = self.attempts_remaining
-        form.game_over = self.game_over
-        form.message = message
-        form.cancelled = self.cancelled
         form.target = self.target
+        form.state = self.state
+        form.user_name = self.user.get().name
+        form.game_over = self.game_over
+        form.cancelled  = self.cancelled
+        form.attempts_allowed = self.attempts_allowed
+        form.attempts_remaining = self.attempts_remaining
         form.game_history = self.game_history
+        form.message = message
         return form
 
     def end_game(self, won=False):
@@ -94,13 +83,15 @@ class Score(ndb.Model):
 class GameForm(messages.Message):
     """GameForm for outbound game state information"""
     urlsafe_key = messages.StringField(1, required=True)
-    attempts_remaining = messages.IntegerField(2, required=True)
-    game_over = messages.BooleanField(3, required=True)
-    message = messages.StringField(4, required=True)
-    user_name = messages.StringField(5, required=True)
+    target = messages.StringField(2, required=True)
+    state = messages.StringField(3, required=True)
+    user_name = messages.StringField(4, required=True)
+    game_over = messages.BooleanField(5, required=True)
     cancelled = messages.BooleanField(6, required=True)
-    target = messages.IntegerField(7, repeated=True)
-    game_history = messages.StringField(8, repeated=True)
+    attempts_allowed = messages.IntegerField(7, required=True)
+    attempts_remaining = messages.IntegerField(8, required=True)
+    game_history = messages.StringField(9, repeated=True)
+    message = messages.StringField(10, required=True)
 
 # Added for get_user_games
 class GameForms(messages.Message):
@@ -117,10 +108,7 @@ class NewGameForm(messages.Message):
 
 class MakeMoveForm(messages.Message):
     """Used to make a move in an existing game"""
-    first_digit = messages.IntegerField(1, required=True)
-    second_digit = messages.IntegerField(2, required=True)
-    third_digit = messages.IntegerField(3, required=True)
-
+    character = messages.StringField(1, required=True)
 
 class ScoreForm(messages.Message):
     """ScoreForm for outbound Score information"""

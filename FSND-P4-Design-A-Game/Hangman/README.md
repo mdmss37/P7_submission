@@ -11,17 +11,7 @@
 
 
 ##Game Description:
-You are requested to guess 3digit number(all digit is different number from 0~9) within 10 tries.
-Every time you guessed number, you will get feedback as below example.
-number and digit matches --> "strike"
-number exists in target --> "ball"
-
-EX. Target = 234.
-Guess 234 = 3-strike and 0-ball where player won.
-Guess 235 = 2-strike and 0-ball where 2 and 3 matches with Target
-Guess 243 = 1-strike and 2-ball where 2 matches with Target, 4 and 3 exists in Target
-Guess 423 = 0-strike and 3-ball where 2, 3 and 4 exists in target but digit not matches
-Guess 782 = 0-strike and 1 ball where 2 exists in target but digit not matches
+player is requested to guess the word(hang man)
 
 Players are ranked based on win qty.
 
@@ -85,13 +75,48 @@ Each game can be retrieved or played by using the path parameter
     - Description: Returns all Scores recorded by the provided player (unordered).
     Will raise a NotFoundException if the User does not exist.
 
- - **get_active_game_count**
-    - Path: 'games/active'
+ - **get_user_active_games**
+    - Path: 'games/user/active'
     - Method: GET
     - Parameters: None
     - Returns: StringMessage
-    - Description: Gets the average number of attempts remaining for all games
-    from a previously cached memcache key.
+    - Description: Gets active games of certan user
+
+ - **get_user_all_games**
+    - Path: 'games/user/all'
+    - Method: GET
+    - Parameters: None
+    - Returns: StringMessage
+    - Description: Gets active games of certan user
+
+ - **cancel_game**
+    - Path: 'game/cancel'
+    - Method: PUT
+    - Parameters: None
+    - Returns: StringMessage
+    - Description: Cancel certain game
+
+ - **get_high_scores**
+    - Path: 'games/highscores'
+    - Method: GET
+    - Parameters: None
+    - Returns: StringMessage
+    - Description: Gets highscores of games limited with number_of_results.
+
+ - **get_user_rankings**
+    - Path: 'games/rankings'
+    - Method: GET
+    - Parameters: None
+    - Returns: StringMessage
+    - Description: Gets ranking of users. Ranking is based on number of win.
+
+ - **get_game_history**
+    - Path: 'game/history'
+    - Method: GET
+    - Parameters: None
+    - Returns: StringMessage
+    - Description: Gets all movement for certaion game.
+
 
 ##Models Included:
  - **User**
@@ -107,6 +132,8 @@ Each game can be retrieved or played by using the path parameter
  - **GameForm**
     - Representation of a Game's state (urlsafe_key, attempts_remaining,
     game_over flag, message, user_name).
+ - **GameForms**
+    - Multiple GameForm container.
  - **NewGameForm**
     - Used to create a new game (user_name, min, max, attempts)
  - **MakeMoveForm**
@@ -116,5 +143,9 @@ Each game can be retrieved or played by using the path parameter
     guesses).
  - **ScoreForms**
     - Multiple ScoreForm container.
+ - **UserRank**
+    - Number of win for certain player.
+ - **UserRanks**
+    - Multiple UserRank container.
  - **StringMessage**
     - General purpose String container.

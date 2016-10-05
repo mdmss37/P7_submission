@@ -33,8 +33,8 @@ USER_REQUEST = endpoints.ResourceContainer(user_name=messages.StringField(1),
 
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
-@endpoints.api(name='guess_a_number', version='v1')
-class BaseBallApi(remote.Service):
+@endpoints.api(name='hang_man', version='v1')
+class HangManApi(remote.Service):
     """Game API"""
     @endpoints.method(request_message=USER_REQUEST,
                       response_message=StringMessage,
@@ -73,7 +73,7 @@ class BaseBallApi(remote.Service):
         # This operation is not needed to complete the creation of a new game
         # so it is performed out of sequence.
         taskqueue.add(url='/tasks/cache_average_attempts')
-        return game.to_form('Good luck playing Guess a Number!')
+        return game.to_form('You got the {}, please guess the word!'.format(game.state))
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
                       response_message=GameForm,
@@ -95,60 +95,41 @@ class BaseBallApi(remote.Service):
                       http_method='PUT')
     def make_move(self, request):
         """Makes a move. Returns a game state with message"""
-        strike = 0
-        ball = 0
+        guess = request.character.lower()
+
+        if len(guess) != 1:
+            return game.to_form("please enter one character!")
 
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
-        if game.game_over:
+        if game.game_over or game.cancelled:
             return game.to_form('Game already over!')
 
-        target = game.target
-        copy_target = target[:]
-
         game.attempts_remaining -= 1
-        # check strike and if strike, change target digit to 9999 for check ball
-        if request.first_digit == copy_target[0]:
-            strike += 1
-            copy_target[0] = 9999
-        if request.second_digit == copy_target[1]:
-            strike += 1
-            copy_target[1] = 9999
-        if request.third_digit == copy_target[2]:
-            strike += 1
-            copy_target[2] = 9999
-        # check ball
-        if request.first_digit in copy_target:
-            ball += 1
-        if request.second_digit in copy_target:
-            ball += 1
-        if request.third_digit in copy_target:
-            ball += 1
 
-        if strike == 3:
-            # TODO: can make add history function
-            game.game_history.append(
-                "Guess: {}{}{}, result: {} strike and {} ball".format(
-                request.first_digit, request.second_digit, request.third_digit,
-                strike, ball))
-            game.end_game(True)
-            return game.to_form('You win!')
-        else:
-            msg = "{} strike and {} ball!".format(str(strike), str(ball))
+        if guess in game.target:
+            state_list = list(game.state)
+            target_list = list(game.target)
+            for (i, c) in enumerate(target_list):
+                if c == guess:
+                    state_list[i] = guess
+            game.state = "".join(state_list)
 
-        if game.attempts_remaining < 1:
-            game.game_history.append(
-                "Guess: {}{}{}, result: {} strike and {} ball".format(
-                request.first_digit, request.second_digit, request.third_digit,
-                strike, ball))
-            game.end_game(False)
-            return game.to_form(msg + ' Game over!')
+            if game.state == game.target:
+                game.game_history.append(guess)
+                game.end_game(True)
+                return game.to_form("you win! target was {}".format(game.target))
+            elif game.attempts_remaining < 1:
+                game.game_history.append(guess)
+                game.end_game(False)
+                return game.to_form("you lose! target was {}".format(game.target))
+            else:
+                game.game_history.append(guess)
+                game.put()
+                return game.to_form("Current state is {}, history is {}".format(game.state, game.game_history))
         else:
-            game.game_history.append(
-                "Guess: {}{}{}, result: {} strike and {} ball".format(
-                request.first_digit, request.second_digit, request.third_digit,
-                strike, ball))
+            game.game_history.append(guess)
             game.put()
-            return game.to_form(msg)
+            return game.to_form("Current state is {}, history is {}".format(game.state, game.game_history))
 
     @endpoints.method(response_message=ScoreForms,
                       path='scores',
@@ -282,4 +263,4 @@ class BaseBallApi(remote.Service):
         # TODO: need to check the way to show only Game history
         return game.to_form("Please check Game history!")
 
-api = endpoints.api_server([BaseBallApi])
+api = endpoints.api_server([HangManApi])
