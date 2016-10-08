@@ -17,7 +17,6 @@ from user import (
     UserRanks,
     StringMessage
 )
-
 from models import Game, Score
 
 # GameForms, UserRank, UserRanks added
@@ -113,6 +112,12 @@ class HangManApi(remote.Service):
                       http_method='PUT')
     def make_move(self, request):
         """Makes a move. Returns a game state with message"""
+
+        # Having below error in case guess is single character and in target
+        # AttributeError: 'CombinedContainer' object has no attribute 'chracter'
+        # at make_move (/base/data/home/apps/s~udacitydesignagame/1.396179843065090709/api.py:119)
+
+
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
 
         # Test if the game is already over.
@@ -169,7 +174,7 @@ class HangManApi(remote.Service):
                     if c == guess:
                         state_list[i] = guess
                 game.state = "".join(state_list)
-
+                print(game.state)
                 if game.state == game.target:
                     game.game_history.append(guess)
                     game.end_game(True)
@@ -189,10 +194,11 @@ class HangManApi(remote.Service):
                         return game.to_form(
                         "You already got it!. Please try another! Current state is {}, history is {}".format(
                             game.state, game.game_history))
-                    game.game_history.append(guess)
-                    game.put()
-                    return game.to_form(
-                        "You got it!. Current state is {}, history is {}".format(game.state, game.game_history))
+                    else:
+                        game.game_history.append(guess)
+                        game.put()
+                        return game.to_form(
+                            "You got it!. Current state is {}, history is {}".format(game.state, game.game_history))
             else:
                 if game.attempts_remaining < 1:
                     game.game_history.append(guess)
