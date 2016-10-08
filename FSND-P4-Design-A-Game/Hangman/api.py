@@ -11,7 +11,14 @@ from protorpc import remote, messages
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
 
-from models import User, Game, Score
+from user import (
+    User,
+    UserRank,
+    UserRanks,
+    StringMessage
+)
+
+from models import Game, Score
 
 # GameForms, UserRank, UserRanks added
 # To make your import statements more readable you could consider using a more verbose syntax:
@@ -22,15 +29,13 @@ from models import User, Game, Score
 # )
 # This makes development easier, since it's easy to find, add or delete a function.
 from models import (
-    StringMessage,
     NewGameForm,
     GameForm,
     MakeMoveForm,
     ScoreForms,
-    GameForms,
-    UserRank,
-    UserRanks
+    GameForms
     )
+
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -103,7 +108,7 @@ class HangManApi(remote.Service):
 
     @endpoints.method(request_message=MAKE_MOVE_REQUEST,
                       response_message=GameForm,
-                      path='game/{urlsafe_game_key}',
+                      path='game/move/{urlsafe_game_key}',
                       name='make_move',
                       http_method='PUT')
     def make_move(self, request):
@@ -178,12 +183,16 @@ class HangManApi(remote.Service):
                     return game.to_form("you lose! target was {}".format(game.target))
 
                 else:
+                    if guess in game.history:
+                        game.game_history.append(guess)
+                        game.put()
+                        return game.to_form(
+                        "You already got it!. Please try another! Current state is {}, history is {}".format(
+                            game.state, game.game_history))
                     game.game_history.append(guess)
                     game.put()
                     return game.to_form(
-                        """ {} is not in the target.
-                        Current state is {},
-                        history is {}""".format(guess, game.state, game.game_history))
+                        "You got it!. Current state is {}, history is {}".format(game.state, game.game_history))
             else:
                 if game.attempts_remaining < 1:
                     game.game_history.append(guess)
@@ -192,7 +201,8 @@ class HangManApi(remote.Service):
                 else:
                     game.game_history.append(guess)
                     game.put()
-                    return game.to_form("Current state is {}, history is {}".format(game.state, game.game_history))
+                    return game.to_form("{} is not in the target. Current state is {}, history is {}".format(
+                        guess, game.state, game.game_history))
 
 
         # check if guess is single character or same length with target, otherwise handle as bad input.
@@ -287,7 +297,8 @@ class HangManApi(remote.Service):
     def cancel_game(self, request):
         """Cancel game in progress."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
-        if game:
+
+        if game.game_over == False:
             game.cancelled = True
             game.put()
             return StringMessage(message="Current game has been cancelled!")

@@ -10,10 +10,10 @@ from google.appengine.ext import ndb
 # TODO: will increase wordlist.
 WORDS_LIST = ["student", "teacher", "pineapple", "apple", "flower"]
 
-class User(ndb.Model):
-    """User profile"""
-    name = ndb.StringProperty(required=True)
-    email = ndb.StringProperty()
+# class User(ndb.Model):
+#     """User profile"""
+#     name = ndb.StringProperty(required=True)
+#     email = ndb.StringProperty()
 
 
 class Game(ndb.Model):
@@ -102,10 +102,6 @@ class GameForms(messages.Message):
 class NewGameForm(messages.Message):
     """Used to create a new game"""
     user_name = messages.StringField(1, required=True)
-    # min = messages.IntegerField(2, default=1)
-    # max = messages.IntegerField(3, default=10)
-    # attempts = messages.IntegerField(4, default=5)
-
 
 class MakeMoveForm(messages.Message):
     """Used to make a move in an existing game"""
@@ -123,14 +119,14 @@ class ScoreForms(messages.Message):
     """Return multiple ScoreForms"""
     items = messages.MessageField(ScoreForm, 1, repeated=True)
 
-class UserRank(messages.Message):
-    """Return user ranking based on number of win"""
-    user_name = messages.StringField(1, required=True)
-    win_number = messages.IntegerField(2, required=True)
+# class UserRank(messages.Message):
+#     """Return user ranking based on number of win"""
+#     user_name = messages.StringField(1, required=True)
+#     win_number = messages.IntegerField(2, required=True)
 
-class UserRanks(messages.Message):
-    """Return multiple UserRank"""
-    items = messages.MessageField(UserRank, 1, repeated=True)
+# class UserRanks(messages.Message):
+#     """Return multiple UserRank"""
+#     items = messages.MessageField(UserRank, 1, repeated=True)
 
 class StringMessage(messages.Message):
     """StringMessage-- outbound (single) string message"""
