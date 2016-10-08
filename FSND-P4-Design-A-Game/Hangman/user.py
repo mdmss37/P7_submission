@@ -1,5 +1,9 @@
-import random
-from datetime import date
+"""user.py - This file contains user ralated class definitions for the Datastore
+entities used by the Game.
+"""
+
+# import random
+# from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
 

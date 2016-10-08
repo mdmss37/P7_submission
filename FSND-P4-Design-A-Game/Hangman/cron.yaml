@@ -1,4 +1,4 @@
 cron:
-- description: Send a reminder email to all users
+- description: Send a reminder email to users who have unfinished games
   url: /crons/send_reminder
   schedule: every 24 hours
