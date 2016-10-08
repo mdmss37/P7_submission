@@ -14,8 +14,23 @@ from google.appengine.api import taskqueue
 from models import User, Game, Score
 
 # GameForms, UserRank, UserRanks added
-from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, GameForms, UserRank, UserRanks
+# To make your import statements more readable you could consider using a more verbose syntax:
+# from module import (
+#     aaa,
+#     bbb,
+#     ccc,
+# )
+# This makes development easier, since it's easy to find, add or delete a function.
+from models import (
+    StringMessage,
+    NewGameForm,
+    GameForm,
+    MakeMoveForm,
+    ScoreForms,
+    GameForms,
+    UserRank,
+    UserRanks
+    )
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -63,17 +78,15 @@ class HangManApi(remote.Service):
         if not user:
             raise endpoints.NotFoundException(
                     'A User with that name does not exist!')
-        try:
-            game = Game.new_game(user.key)
-        except ValueError:
-            raise endpoints.BadRequestException('Maximum must be greater '
-                                                'than minimum!')
+
+        game = Game.new_game(user.key)
 
         # Use a task queue to update the average attempts remaining.
         # This operation is not needed to complete the creation of a new game
         # so it is performed out of sequence.
         taskqueue.add(url='/tasks/cache_average_attempts')
-        return game.to_form('You got the {}, please guess the word!'.format(game.state))
+        return game.to_form(
+            'You got the {}, word with length {}, please guess the word!'.format(game.state, str(len(game.state))))
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
                       response_message=GameForm,
@@ -95,41 +108,108 @@ class HangManApi(remote.Service):
                       http_method='PUT')
     def make_move(self, request):
         """Makes a move. Returns a game state with message"""
-        guess = request.character.lower()
-
-        if len(guess) != 1:
-            return game.to_form("please enter one character!")
-
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
+
+        # Test if the game is already over.
+        # Making move in ended game should never happen, consider as Error.
         if game.game_over or game.cancelled:
-            return game.to_form('Game already over!')
+            raise endpoints.ForbiddenException('Illegal action: Game is already over.')
 
-        game.attempts_remaining -= 1
-
-        if guess in game.target:
-            state_list = list(game.state)
-            target_list = list(game.target)
-            for (i, c) in enumerate(target_list):
-                if c == guess:
-                    state_list[i] = guess
-            game.state = "".join(state_list)
-
-            if game.state == game.target:
-                game.game_history.append(guess)
-                game.end_game(True)
-                return game.to_form("you win! target was {}".format(game.target))
-            elif game.attempts_remaining < 1:
+        # check if guess is NON alphabetic or is empty, if valid set guess as input
+        if request.character.isalpha():
+            guess = request.character.lower()
+        else:
+            guess = str(request.character)
+            game.attempts_remaining -= 1
+            if game.attempts_remaining < 1:
                 game.game_history.append(guess)
                 game.end_game(False)
                 return game.to_form("you lose! target was {}".format(game.target))
             else:
                 game.game_history.append(guess)
                 game.put()
-                return game.to_form("Current state is {}, history is {}".format(game.state, game.game_history))
-        else:
-            game.game_history.append(guess)
-            game.put()
-            return game.to_form("Current state is {}, history is {}".format(game.state, game.game_history))
+                return game.to_form(
+                    "Please enter valid input. Current state is {}, history is {}".format(
+                        game.state, game.game_history))
+
+        # Check player is guessing entire word or not
+        if len(guess) == len(game.target):
+
+            if guess == game.target:
+                game.game_history.append(guess)
+                game.state = game.target
+                game.end_game(True)
+                return game.to_form("you win! target was {}".format(game.target))
+
+            else:
+                game.attempts_remaining -= 1
+
+                if game.attempts_remaining < 1:
+                    game.game_history.append(guess)
+                    game.end_game(False)
+                    return game.to_form("you lose! target was {}".format(game.target))
+                else:
+                    game.game_history.append(guess)
+                    game.put()
+                    return game.to_form(
+                        "Current state is {}, history is {}".format(
+                            game.state, game.game_history))
+
+        # Check in case of single character input
+        if len(guess) == 1:
+            if guess in game.target:
+                state_list = list(game.state)
+                target_list = list(game.target)
+                for (i, c) in enumerate(target_list):
+                    if c == guess:
+                        state_list[i] = guess
+                game.state = "".join(state_list)
+
+                if game.state == game.target:
+                    game.game_history.append(guess)
+                    game.end_game(True)
+                    return game.to_form("you win! target was {}".format(game.target))
+
+                game.attempts_remaining -= 1
+
+                if game.attempts_remaining < 1:
+                    game.game_history.append(guess)
+                    game.end_game(False)
+                    return game.to_form("you lose! target was {}".format(game.target))
+
+                else:
+                    game.game_history.append(guess)
+                    game.put()
+                    return game.to_form(
+                        """ {} is not in the target.
+                        Current state is {},
+                        history is {}""".format(guess, game.state, game.game_history))
+            else:
+                if game.attempts_remaining < 1:
+                    game.game_history.append(guess)
+                    game.end_game(False)
+                    return game.to_form("you lose! target was {}".format(game.target))
+                else:
+                    game.game_history.append(guess)
+                    game.put()
+                    return game.to_form("Current state is {}, history is {}".format(game.state, game.game_history))
+
+
+        # check if guess is single character or same length with target, otherwise handle as bad input.
+        if len(guess) != len(game.target) or guess in game.game_history:
+            game.attempts_remaining -= 1
+            if game.attempts_remaining < 1:
+                game.game_history.append(guess)
+                game.end_game(False)
+                return game.to_form("you lose! target was {}".format(game.target))
+            else:
+                game.game_history.append(guess)
+                game.put()
+                return game.to_form(
+                """Please enter single alphabet, word with same length with target.
+                You can not do same guess twice.
+                Current state is {}, history is {}.
+                """.format(game.state, game.game_history))
 
     @endpoints.method(response_message=ScoreForms,
                       path='scores',

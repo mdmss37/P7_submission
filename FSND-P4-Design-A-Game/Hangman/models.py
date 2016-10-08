@@ -7,7 +7,8 @@ from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
 
-WORDS_LIST = ["student", "dog", "cat", "apple", "flower"]
+# TODO: will increase wordlist.
+WORDS_LIST = ["student", "teacher", "pineapple", "apple", "flower"]
 
 class User(ndb.Model):
     """User profile"""
@@ -26,8 +27,8 @@ class Game(ndb.Model):
     user = ndb.KeyProperty(required=True, kind='User')
     game_over = ndb.BooleanProperty(required=True, default=False)
     cancelled = ndb.BooleanProperty(required=True, default=False)
-    attempts_allowed = ndb.IntegerProperty(required=True, default=10)
-    attempts_remaining = ndb.IntegerProperty(required=True, default=10)
+    attempts_allowed = ndb.IntegerProperty(required=True, default=6)
+    attempts_remaining = ndb.IntegerProperty(required=True, default=6)
     game_history = ndb.StringProperty(repeated=True)
 
     @classmethod
