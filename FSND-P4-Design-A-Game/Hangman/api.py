@@ -286,9 +286,9 @@ class HangManApi(remote.Service):
     def get_high_scores(self, request):
         """return highscores limited with number_of_results"""
         if request.number_of_results:
-            scores = Score.query().order(Score.guesses).fetch(limit = request.number_of_results)
+            scores = Score.query(Score.won == True).order(Score.guesses).fetch(limit = request.number_of_results)
         else:
-            scores = Score.query().order(Score.guesses).fetch()
+            scores = Score.query(Score.won == True).order(Score.guesses).fetch()
         return ScoreForms(items=[score.to_form() for score in scores])
 
     @endpoints.method(response_message=UserRanks,
