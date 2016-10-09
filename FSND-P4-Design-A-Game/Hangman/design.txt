@@ -1,0 +1,15 @@
+What additional properties did you add to your models and why?
+
+1.Game Entity
+- target, to store target word of the hangman game
+- state, to store guessing progress of the hangman game
+- cancelled, to check user cancelled active game
+- game_history, to track user's guess along the game
+
+2. UserRank, UserRanks
+I added UserRank and UserRank Form to use when return Userrank
+
+What were some of the trade-offs or struggles you faced when implementing the new game logic?
+
+I implemented Hangman game.
+I thought it was simple game, but my implementation turns out to be many if/else clause. I want to find more cleaner way of implementation. In case of more complex business logic involved, backend proggramer needs to pay attention code readability and sustainablity, otherwise code will become out of control...

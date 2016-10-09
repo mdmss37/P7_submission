@@ -121,21 +121,16 @@ class HangManApi(remote.Service):
             raise endpoints.ForbiddenException('Illegal action: Game is already over.')
 
         # check if guess is NON alphabetic or is empty, if valid set guess as input
-        if request.character.isalpha():
-            guess = request.character.lower()
-        else:
-            guess = str(request.character)
-            game.attempts_remaining -= 1
-            if game.attempts_remaining < 1:
-                game.game_history.append(guess)
-                game.end_game(False)
-                return game.to_form("you lose! target was {}".format(game.target))
-            else:
-                game.game_history.append(guess)
-                game.put()
-                return game.to_form(
-                    "Please enter valid input. Current state is {}, history is {}".format(
-                        game.state, game.game_history))
+        if not request.character.isalpha():
+            raise endpoints.ForbiddenException(
+                'Illegal action: User can only input alphabetic character')
+
+        guess = request.character.lower()
+
+        # check if guess is already in previous guesses.
+        if guess in game.game_history:
+            raise endpoints.ForbiddenException(
+                'Illegal action: User can not repeat same guess twice')
 
         # Check player is guessing entire word or not
         if len(guess) == len(game.target):
@@ -162,6 +157,7 @@ class HangManApi(remote.Service):
 
         # Check in case of single character input
         if len(guess) == 1:
+            # in case of good guess
             if guess in game.target:
                 state_list = list(game.state)
                 target_list = list(game.target)
@@ -169,30 +165,18 @@ class HangManApi(remote.Service):
                     if c == guess:
                         state_list[i] = guess
                 game.state = "".join(state_list)
-                print(game.state)
+
                 if game.state == game.target:
                     game.game_history.append(guess)
                     game.end_game(True)
                     return game.to_form("you win! target was {}".format(game.target))
-
-                if game.attempts_remaining < 1:
-                    game.game_history.append(guess)
-                    game.end_game(False)
-                    return game.to_form("you lose! target was {}".format(game.target))
-
                 else:
-                    if guess in game.game_history:
-                        game.attempts_remaining -= 1
-                        game.game_history.append(guess)
-                        game.put()
-                        return game.to_form(
-                        "You already got it!. Please try another! Current state is {}, history is {}".format(
+                    game.game_history.append(guess)
+                    game.put()
+                    return game.to_form(
+                        "You got it!. Current state is {}, history is {}".format(
                             game.state, game.game_history))
-                    else:
-                        game.game_history.append(guess)
-                        game.put()
-                        return game.to_form(
-                            "You got it!. Current state is {}, history is {}".format(game.state, game.game_history))
+            # Wrong guess with single character
             else:
                 game.attempts_remaining -= 1
                 if game.attempts_remaining < 1:
@@ -204,23 +188,10 @@ class HangManApi(remote.Service):
                     game.put()
                     return game.to_form("{} is not in the target. Current state is {}, history is {}".format(
                         guess, game.state, game.game_history))
-
-
-        # check if guess is single character or same length with target, otherwise handle as bad input.
-        if len(guess) != len(game.target) or guess in game.game_history:
-            game.attempts_remaining -= 1
-            if game.attempts_remaining < 1:
-                game.game_history.append(guess)
-                game.end_game(False)
-                return game.to_form("you lose! target was {}".format(game.target))
-            else:
-                game.game_history.append(guess)
-                game.put()
-                return game.to_form(
-                """Please enter single alphabet, word with same length with target.
-                You can not do same guess twice.
-                Current state is {}, history is {}.
-                """.format(game.state, game.game_history))
+        # not entire word, single character, raise Exception as illeal input
+        if len(guess) != len(game.target):
+            raise endpoints.ForbiddenException(
+                'Illegal action: User can not input the guess with different length with target')
 
     @endpoints.method(response_message=ScoreForms,
                       path='scores',
@@ -299,12 +270,11 @@ class HangManApi(remote.Service):
         """Cancel game in progress."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
 
-        if game.game_over == False:
-            game.cancelled = True
-            game.put()
-            return StringMessage(message="Current game has been cancelled!")
-        else:
+        if not game:
             raise endpoints.NotFoundException('Game not found!')
+        elif game.game_over:
+            raise endpoints.NotFoundException('Game already over, can not be cancelled.')
+        return StringMessage(message="Current game has been cancelled!")
 
     # Extend API,get_high_scores: This endpoint is to return highscores of games,
     # Can be limited by optional parameter number_of_results
