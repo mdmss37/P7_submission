@@ -23,7 +23,7 @@ class SendReminderEmail(webapp2.RequestHandler):
 
         for user in users:
             games = Game.query(Game.user == user.key, Game.game_over == False).fetch
-            if games:
+            if len(games) > 0:
                 subject = 'This is a reminder!'
                 body = 'Hello {}, try out Hangman!'.format(user.name)
                 # This will send test emails, the arguments to send_mail are:
