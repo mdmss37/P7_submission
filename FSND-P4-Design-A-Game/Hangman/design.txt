@@ -1,12 +1,12 @@
 What additional properties did you add to your models and why?
 
-1.Game Entity
+1.Property Added to Game Entity
 - target, to store target word of the hangman game
 - state, to store guessing progress of the hangman game
 - cancelled, to check user cancelled active game
 - game_history, to track user's guess along the game
 
-2. UserRank, UserRanks
+2. UserRank, UserRanks Entity
 I added UserRank and UserRank Form to use when return Userrank
 
 What were some of the trade-offs or struggles you faced when implementing the new game logic?
